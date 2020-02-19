@@ -1,0 +1,139 @@
+#!/bin/bash
+
+_export() {
+	export SHEET_FILE="$HOME/cheatsheet"
+	export HISTORY_FILE="$HOME/.cache/cheet_histfile"
+	export SHELL="$(which bash)"
+	export DM="┃"
+	export EDITOR="vim"
+
+	export -f _preview
+	export -f _edit_all
+	export -f _show
+	export -f _add
+	export -f _format
+	export -f _edit_single
+}
+
+_show() {
+	local cp_ac cp_ka cp_dp cp_nt edit_all edit_single add_items reload_all
+	cp_ac="alt-1:execute(echo {} | awk -F \"$DM\" '{print \$2}' | xclip -sel clip)"
+	cp_ka="alt-2:execute(echo {} | awk -F \"$DM\" '{print \$3}' | xclip -sel clip)"
+	cp_dp="alt-3:execute(echo {} | awk -F \"$DM\" '{print \$4}' | xclip -sel clip)"
+	cp_nt="alt-4:execute(echo {} | awk -F \"$DM\" '{print \$5}' | xclip -sel clip)"
+	edit_all="ctrl-p:execute(_edit_all)+abort"
+	edit_single="ctrl-o:execute(_edit_single {})+abort"
+	add_items="ctrl-l:execute(_add)+abort"
+	reload_all="ctrl-r:execute(_format)+reload(cat \"$SHEET_FILE\")"
+	
+	cat "$SHEET_FILE" | fzf --preview "_preview {}" --preview-window=up:50%:wrap --bind="$cp_ac,$cp_ka,$cp_dp,$cp_nt,$edit_all,$edit_single,$add_items,$reload_all"
+}
+
+
+_edit_all() {
+	$EDITOR "${SHEET_FILE}" </dev/tty
+
+	_format
+	_show
+}
+
+_edit_single() {
+	local temp_file item others
+	temp_file="$(mktemp)"
+
+	echo -E "$@" >> "$HISTORY_FILE"
+	echo -E "$@" | sed -r -e "s/(^[[:space:]]*${DM})|(${DM}[[:space:]]*$)//g" -e "s/$DM/\n/g" > "$temp_file"
+	
+	$EDITOR "$temp_file" < /dev/tty
+	
+	local IFS=$'\n'
+	item=( $(cat $temp_file) )
+	others=$(grep -v -F "$@" "$SHEET_FILE")
+	
+	( echo -E "$DM ${item[0]} $DM ${item[1]} $DM ${item[2]} $DM ${item[3]} $DM"; echo -E "$others"  ) > $SHEET_FILE
+
+	_format
+	_show
+}
+
+_add_default() {
+	if [ ! -f "$SHEET_FILE" ] || [ $(cat "$SHEET_FILE" | wc -l) -le 1 ]; then
+		echo -e "${DM} cheet ${DM} <ctrl-l>${DM}Add new items.${DM}\n${DM}cheet${DM}<ctrl-p>${DM}Edit all items\n${DM}cheet${DM}<ctrl-o>${DM}Edit current item\n${DM}cheet${DM}<Alt-1~4>${DM}Copy contents from column 1~4." >> "$SHEET_FILE"
+		_format
+	fi
+}
+
+
+_add() {
+    local temp_file
+	local -a attrs items
+	local IFS=$'\n'
+
+	temp_file="$(mktemp)"
+	echo -E "%% Please add your items below by following this format: App/Command \n Arg/Keybinding \n Description \n Note %%" > "$temp_file"
+
+	$EDITOR "$temp_file" < /dev/tty
+
+	attrs=( $(cat "${temp_file}" | sed 's/^$/ /g')
+			' '
+			' '
+			' '
+		  )
+	
+	for((s=0; s<${#attrs[@]}; s++)); do
+		[[ "${attrs[$s]}" =~ ^[[:space:]]*(%%.*%%)*[[:space:]]*$ ]] || break
+	done
+
+	[ ${#attrs[@]} -lt 4 ] && exit
+	
+	for((i=s; i<${#attrs[@]}-3; i+=4)); do
+		items[$i]="$DM ${attrs[$i]} $DM ${attrs[$((i+1))]} $DM ${attrs[$((i+2))]} $DM ${attrs[$((i+3))]} $DM"
+	done
+
+	printf '%s\n' "${items[@]}" >> "$SHEET_FILE"
+
+	_format
+	_show
+}
+
+_format() {
+	local -a items _ac _ka _dp _nt others
+	local lac=0 lka=0 ldp=0 lnt=0 t
+	local IFS=$'\n' __PIFS="$IFS"
+	
+	items=($(grep -E "^[[:space:]]*$DM" "$SHEET_FILE" | sed -r "s/[[:space:]]*${DM}[[:space:]]*/${DM}/g"))
+	others=($(grep -Ev "^[[:space:]]*$DM" "$SHEET_FILE"))
+	
+	local IFS="$DM"
+	for((i=0; i<${#items[@]};i++)); do
+		read -r t _ac[$i] _ka[$i] _dp[$i] _nt[$i] <<< ${items[$i]}
+		[ ${#_ac[$i]} -gt $lac ] && lac=${#_ac[$i]}
+		[ ${#_ka[$i]} -gt $lka ] && lka=${#_ka[$i]}
+		[ ${#_dp[$i]} -gt $ldp ] && ldp=${#_dp[$i]}
+		[ ${#_nt[$i]} -gt $lnt ] && lnt=${#_nt[$i]}
+	done
+
+	local IFS=' '
+	for((i=0; i<${#_ac[@]};i++)); do
+		read -r items[$i] <<< "$(printf "${DM} %-${lac}s ${DM} %-${lka}s ${DM} %-${ldp}s ${DM} %-${lnt}s $DM" "${_ac[$i]}" "${_ka[$i]}" "${_dp[$i]}" "${_nt[$i]}")"
+	done
+	( printf '%s\n' "${items[@]}" | sort -u | sed 's/${DM}[[:space:]]*$/${DM}/g'; printf '%s\n' "${others[@]}" ) > "$SHEET_FILE"
+}
+
+_preview() {
+	LCO='\033[34m'
+	RCO='\033[0m'
+	if [[ "$@" =~ ^"${DM}" ]]; then
+		awk -F "$DM" "{ gsub(/[ \t]+$DM/, \"$DM\");  print \"${LCO}App/Command:${RCO}\"\$2 \"\n   ${LCO}Key/Arg :${RCO}\"\$3 \"\n${LCO}Description:${RCO}\"\$4 \"\n      ${LCO}Note :${RCO}\" \$5 }" <<< "$@"
+	else
+		echo -e "$@"
+	fi
+}
+
+main() {
+	_export
+	_add_default
+	_show
+}
+
+main
