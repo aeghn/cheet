@@ -7,7 +7,7 @@ This is a little bash script for browsing cheatsheets with fzf.
 ** Add
    Hit =<C-l>= and you will go into the editor page.
    
-   You can add more than one entry at a time, and starting from the first non-empty or %%.*%% line, every four lines are a group, which are the program(command), argument(keybinding), description and notes in order.
+   You can add more than one entry at a time, and starting from the first line after empty or %%.*%% lines, every four lines are a group, which are the program(command), argument(keybinding), description and notes in order.
    [[https://github.com/aeghn/cheet/blob/master/previews/add.gif]]
 ** Edit
 *** Edit one entry
