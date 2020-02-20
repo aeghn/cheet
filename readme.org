@@ -1,8 +1,9 @@
-This is a little bash script for browsing cheatsheets with fzf.
+This is a little bash script for querying cheatsheets with fzf.
 
 * Usage
 ** Browse
    Just type the keyword and look at the preview.
+   I spilt an entry into four parts, they are: app/command name, argument/keybinding, description and note. I suggest to use offical help to fill description part and make your own note.
    [[https://github.com/aeghn/cheet/blob/master/previews/browse.gif]]
 ** Add
    Hit =<C-l>= and you will go into the editor page.
