@@ -1,7 +1,7 @@
-┃ cheet       ┃ <Alt-1~4>                     ┃ Copy contents from column 1~4.                                             ┃                                                                                         ┃
+┃ cheet       ┃ <Alt-1~4>                     ┃ Copy contents from column 1~4.                                             ┃ ...                                                                                     ┃
+┃ cheet       ┃ <ctrl-i>                      ┃ Edit all items                                                             ┃                                                                                         ┃
 ┃ cheet       ┃ <ctrl-l>                      ┃ Add new items.                                                             ┃                                                                                         ┃
 ┃ cheet       ┃ <ctrl-o>                      ┃ Edit current item                                                          ┃                                                                                         ┃
-┃ cheet       ┃ <ctrl-p>                      ┃ Edit all items                                                             ┃                                                                                         ┃
 ┃ example app ┃ arg                           ┃ description                                                                ┃ note                                                                                    ┃
 ┃ org-mode    ┃ C-3 C-c C-v                   ┃ view 3rd TODO keyword's sparse tree                                        ┃                                                                                         ┃
 ┃ org-mode    ┃ C-c a a                       ┃ compile agenda for the current week                                        ┃                                                                                         ┃
