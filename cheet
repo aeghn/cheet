@@ -2,6 +2,7 @@
 
 SCRIPT=$(readlink -f $0)
 export SHEET_FILE="${SCRIPT%/*}/cheatsheet"
+#export SHEET_FILE="$HOME/.scripts/data/cheet/cheatsheet"
 export HISTORY_FILE="$HOME/.cache/cheet_histfile"
 export SHELL="$(which bash)"
 export DM="┃"
@@ -36,11 +37,11 @@ _copy() {
 	local part=$1
 	shift
 
-	if which xclip  2> /dev/null; then
+	if ! which xclip 2> /dev/null; then
 		notify-send "Nothing was copied to clipboard, please install xclip" 
 	       	return
 	fi
-	echo "$@" | awk -F "$DM" "{print \$((${part}+1))}" | xclip -sel clip
+	echo "$@" | awk -F "$DM" "{print \$((${part}+1))}" |sed -r "s/(^[[:space:]]*)|([[:space:]]*$)//g" | xclip -sel clip
 }
 
 _edit_all() {
