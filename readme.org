@@ -3,10 +3,10 @@ This is a little bash script for querying cheatsheets with fzf.
 * Usage
 ** Browse
    Just type the keyword and look at the preview.
-   I spilt an entry into four parts, they are: app/command name, argument/keybinding, description and note. I suggest to use offical help to fill description part and make your own note.
+   I spilt an entry into four parts, they are: app/command name, argument/keybinding, description and note. I suggest to use offical help to fill description part and insert the note part with your own understanding.
    [[https://github.com/aeghn/cheet/blob/master/previews/browse.gif]]
 ** Add
-   Hit =<C-l>= and you will go into the editor page.
+   Hit =<C-l>= and go to the editor page.
    
    You can add more than one entry at a time, and starting from the first line after empty or %%.*%% lines, every four lines are a group, which are the program(command), argument(keybinding), description and notes in order.
    [[https://github.com/aeghn/cheet/blob/master/previews/add.gif]]
@@ -17,17 +17,16 @@ This is a little bash script for querying cheatsheets with fzf.
 	The old entry would be backed up at HISTORY_FILE( Default: =$HOME/.cache/cheet_histfile= ).
 	[[https://github.com/aeghn/cheet/blob/master/previews/edit-single.gif]]
 *** Edit all entries
-	Hit =<C-i>= and you will go into the editor page. You will directly edit the cheatsheet file here.
+	Hit =<C-i>= and go to the editor page. You can directly edit the cheatsheet file here.
 ** Format
    Hit =<C-r>= to format entries.
-   If the lines begins with DELIMITER then they will be sorted, the other lines will be put at the last of sheet.
+   The lines beginning with DELIMITER will be sorted, the other lines will be put at the tail of sheet.
    [[https://github.com/aeghn/cheet/blob/master/previews/format.gif]]
 * Todo
   - Add argument =--editor= to specify the editor.
 
 * Credits
   - fzf: https://github.com/junegunn/fzf
-  - org-mode: https://orgmode.org/ (This tool is inspired by Org-mode)
+  - org-mode: https://orgmode.org/ (This script is inspired by Org-mode)
   - Cheatsheets
-	- org-mode: https://orgmode.org/worg/orgcard.html
-	- tmux: https://gist.github.com/MohamedAlaa/2961058
+	- ranger: https://gist.github.com/heroheman/aba73e47443340c35526755ef79647eb

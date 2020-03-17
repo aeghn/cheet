@@ -1,0 +1,16 @@
+#!/bin/bash
+
+script=""$(cd "$(dirname "$0")" && pwd)""
+title=cheetzsbd
+rule='[title=^cheetzsbd$]'
+
+i3-msg "$rule scratchpad show" && exit 0
+
+termite -t cheetzsbd -e "$script/cheet" &
+while true; do
+    sleep 0.10
+    i3-msg "$rule move scratchpad; scratchpad show" && break
+done
+
+
+ 
