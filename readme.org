@@ -22,6 +22,13 @@ This is a little bash script for querying cheatsheets with fzf.
    Hit =<C-r>= to format entries.
    The lines beginning with DELIMITER will be sorted, the other lines will be put at the tail of sheet.
    [[https://github.com/aeghn/cheet/blob/master/previews/format.gif]]
+** Copy
+   Hit =<M-1>...<M-4>= to copy info from four columns in selected item.
+   [[https://github.com/astrand/xclip][xlicp]] is needed.
+** Pin something
+   Hit =<C-u>= to send a notification in critical level.
+   [[https://github.com/dunst-project/dunst][dunst]] is needed.
+   [[https://github.com/aeghn/cheet/blob/master/previews/nocnoc.gif]]
 * Todo
   - Add argument =--editor= to specify the editor.
 

@@ -16,6 +16,7 @@ _export_function() {
 	export -f _format
 	export -f _edit_single
 	export -f _copy
+    export -f nocnoc
 }
 
 _show() {
@@ -24,12 +25,13 @@ _show() {
 	cp_ka="alt-2:execute(_copy 2 {})"
 	cp_dp="alt-3:execute(_copy 3 {})"
 	cp_nt="alt-4:execute(_copy 4 {})"
+    sd_notify="ctrl-u:execute(nocnoc {})"
 	edit_all="ctrl-i:execute(_edit_all)+abort"
 	edit_single="ctrl-o:execute(_edit_single {})+abort"
 	add_items="ctrl-l:execute(_add)+abort"
 	reload_all="ctrl-r:execute(_format)+reload(cat \"$SHEET_FILE\")"
 	
-	cat "$SHEET_FILE" | fzf --preview "_preview {}" --preview-window=up:50%:wrap --bind="$cp_ac,$cp_ka,$cp_dp,$cp_nt,$edit_all,$edit_single,$add_items,$reload_all"
+	cat "$SHEET_FILE" | fzf --preview "_preview -c {}" --preview-window=up:70%:wrap --bind="$cp_ac,$cp_ka,$cp_dp,$cp_nt,$edit_all,$edit_single,$add_items,$reload_all,$sd_notify"
 }
 
 
@@ -137,12 +139,23 @@ _format() {
 	( printf '%s\n' "${items[@]}" | sort -u | sed 's/${DM}[[:space:]]*$/${DM}/g'; printf '%s\n' "${others[@]}" ) > "$SHEET_FILE"
 }
 
+nocnoc() {    
+	notify-send -u critical "Cheet" "$(_preview -n $@)"
+}
+
 _preview() {
-	LCO='\033[34m'
-	RCO='\033[0m'
+    if [ "$1" == "-c" ]; then
+	    LCO='\033[34m'
+	    RCO='\033[0m'
+        shift 
+    elif [ "$1" == "-n" ]; then
+        LCO="<b>"
+        RCO="</b>"
+        shift
+    fi
 
 	if [[ "$@" =~ ^"${DM}" ]]; then
-		awk -F "$DM" "{ gsub(/[ \t]+$DM/, \"$DM\");  print \"${LCO}App/Command:${RCO}\"\$2 \"\n   ${LCO}Key/Arg :${RCO}\"\$3 \"\n${LCO}Description:${RCO}\"\$4 \"\n      ${LCO}Note :${RCO}\" \$5 }" <<< "$@"
+		awk -F "$DM" "{ gsub(/[ \t]+$DM/, \"$DM\");  print \"${LCO}App/Command:${RCO}\"\$2 \"\n${LCO}Key/Arg :${RCO}\"\$3 \"\n${LCO}Description:${RCO}\"\$4 \"\n${LCO}Note :${RCO}\" \$5 }" <<< "$@"
 	else
 		echo -e "$@"
 	fi
