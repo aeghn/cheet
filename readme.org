@@ -29,11 +29,15 @@ This is a little bash script for querying cheatsheets with fzf.
    Hit =<C-u>= to send a notification in critical level.
    [[https://github.com/dunst-project/dunst][dunst]] is needed.
    [[https://github.com/aeghn/cheet/blob/master/previews/nocnoc.gif]]
+** With Xtodool/i3-wm
+   bind =cheetup=, then you can 
+
 * Todo
   - Add argument =--editor= to specify the editor.
+  - Add attachment support
+  - Add argument =--file= to specify the cheatsheet file.
 
 * Credits
   - fzf: https://github.com/junegunn/fzf
   - org-mode: https://orgmode.org/ (This script is inspired by Org-mode)
-  - Cheatsheets
-	- ranger: https://gist.github.com/heroheman/aba73e47443340c35526755ef79647eb
+  - Cheatsheets: ranger: https://gist.github.com/heroheman/aba73e47443340c35526755ef79647eb

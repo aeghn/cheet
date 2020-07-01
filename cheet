@@ -1,193 +1,267 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SCRIPT=$(readlink -f $0)
 export SHEET_FILE="${SCRIPT%/*}/cheatsheet"
-#export SHEET_FILE="$HOME/.scripts/data/cheet/cheatsheet"
 export HISTORY_FILE="$HOME/.cache/cheet_histfile"
 export SHELL="$(which bash)"
-export DM="┃"
+export CFS="┃"
 export EDITOR="vim"
 
-_export_function() {
-	export -f _preview
-	export -f _edit_all
-	export -f _show
-	export -f _add
-	export -f _format
-	export -f _edit_single
-	export -f _copy
+export_function() {
+    export -f fzf_preview
+    export -f edit_all
+    export -f fzf_show
+    export -f add_records
+    export -f format_sheet
+    export -f edit_single
+    export -f copy_field
     export -f nocnoc
+    export -f add_annex
+    export -f find_file
+    export -f give_back
+    export -f show_annex
 }
 
-_show() {
-	local cp_ac cp_ka cp_dp cp_nt edit_all edit_single add_items reload_all
-	cp_ac="alt-1:execute(_copy 1 {})"
-	cp_ka="alt-2:execute(_copy 2 {})"
-	cp_dp="alt-3:execute(_copy 3 {})"
-	cp_nt="alt-4:execute(_copy 4 {})"
-    sd_notify="ctrl-u:execute(nocnoc {})"
-	edit_all="ctrl-i:execute(_edit_all)+abort"
-	edit_single="ctrl-o:execute(_edit_single {})+abort"
-	add_items="ctrl-l:execute(_add)+abort"
-	reload_all="ctrl-r:execute(_format)+reload(cat \"$SHEET_FILE\")"
-	
-	cat "$SHEET_FILE" | fzf --preview "_preview -c {}" --preview-window=up:70%:wrap --bind="$cp_ac,$cp_ka,$cp_dp,$cp_nt,$edit_all,$edit_single,$add_items,$reload_all,$sd_notify"
+fzf_show() {
+    local cf1="alt-1:execute(copy_field 1 {})"
+    local cf2="alt-2:execute(copy_field 2 {})"
+    local cf3="alt-3:execute(copy_field 3 {})"
+    local cf4="alt-4:execute(copy_field 4 {})"
+    local cf5="alt-4:execute(copy_field 5 {})"
+    local noc="ctrl-u:execute(nocnoc {})"                                   # Send a record to notification (stay 60 seconds)
+    local ar="alt-l:execute(add_records)+abort"                             # Add new records
+    local ea="ctrl-i:execute(edit_all)+abort"                               # Edit the sheet file
+    local es="ctrl-l:execute(edit_single {})+abort"                         # Edit one record
+    local aa="alt-v:execute(add_annex {})+abort"                            # Add new annex to selected record by using fzf
+    local sa="ctrl-v:execute(show_annex {})+abort"                          # Show the selected record's annex
+    local ra="ctrl-r:execute(format_sheet)+reload(cat \"$SHEET_FILE\")"     # Format sheet and reload it
+
+    cat "$SHEET_FILE" | fzf --preview "fzf_preview {}" --preview-window=up:70%:wrap --bind="$cf1,$cf2,$cf3,$cf4,$ea,$es,$ar,$ra,$noc,$aa,$sa"
 }
 
+# Copy one field by hitting Alt-{1,2,3,4,5}
+# Use xclip by default
+# copy_file id record
+copy_field() {
+    local part=$1
+    shift
 
-_copy() {
-	local part=$1
-	shift
-
-	if ! which xclip 2> /dev/null; then
-		notify-send "Nothing was copied to clipboard, please install xclip" 
-	       	return
-	fi
-	echo "$@" | awk -F "$DM" "{print \$((${part}+1))}" |sed -r "s/(^[[:space:]]*)|([[:space:]]*$)//g" | xclip -sel clip
-}
-
-_edit_all() {
-	$EDITOR "${SHEET_FILE}" </dev/tty
-
-	_format
-	_show
-}
-
-_edit_single() {
-	local temp_file item others
-	temp_file="$(mktemp)"
-
-	echo -E "$@" >> "$HISTORY_FILE"
-	echo -E "$@" | sed -r -e "s/(^[[:space:]]*${DM})|(${DM}[[:space:]]*$)//g" -e "s/$DM/\n/g" > "$temp_file"
-	
-	$EDITOR "$temp_file" < /dev/tty
-	
-	local IFS=$'\n'
-	item=( $(cat $temp_file) )
-	others=$(grep -v -F "$@" "$SHEET_FILE")
-	
-	( echo -E "$DM ${item[0]} $DM ${item[1]} $DM ${item[2]} $DM ${item[3]} $DM"; echo -E "$others"  ) > $SHEET_FILE
-
-	_format
-	_show
-}
-
-_add_default() {
-	if [ ! -f "$SHEET_FILE" ] || [ $(cat "$SHEET_FILE" | wc -l) -le 1 ]; then
-		echo -e "${DM} cheet ${DM} <ctrl-l>${DM}Add new items.${DM}
-${DM}cheet${DM}<ctrl-i>${DM}Edit all items
-${DM}cheet${DM}<ctrl-o>${DM}Edit current item
-${DM}cheet${DM}<Alt-1~4>${DM}Copy contents from column 1~4." >> "$SHEET_FILE"
-		_format
-	fi
-}
-
-
-_add() {
-    local temp_file
-	local -a attrs items
-	local IFS=$'\n'
-
-	temp_file="$(mktemp)"
-	echo -E "%% Please add your items below by following this format: App/Command \n Arg/Keybinding \n Description \n Note %%" > "$temp_file"
-
-	$EDITOR "$temp_file" < /dev/tty
-
-	attrs=( $(cat "${temp_file}" | sed 's/^$/ /g')
-			' '
-			' '
-			' '
-		  )
-	
-	for((s=0; s<${#attrs[@]}; s++)); do
-		[[ "${attrs[$s]}" =~ ^[[:space:]]*(%%.*%%)*[[:space:]]*$ ]] || break
-	done
-
-	[ ${#attrs[@]} -lt 4 ] && exit
-	
-	for((i=s; i<${#attrs[@]}-3; i+=4)); do
-		items[$i]="$DM ${attrs[$i]} $DM ${attrs[$((i+1))]} $DM ${attrs[$((i+2))]} $DM ${attrs[$((i+3))]} $DM"
-	done
-
-	printf '%s\n' "${items[@]}" >> "$SHEET_FILE"
-
-	_format
-	_show
-}
-
-_format() {
-	local -a items _ac _ka _dp _nt others
-	local lac=0 lka=0 ldp=0 lnt=0 t
-	local IFS=$'\n' __PIFS="$IFS"
-	
-	items=($(grep -E "^[[:space:]]*$DM" "$SHEET_FILE" | sed -r "s/[[:space:]]*${DM}[[:space:]]*/${DM}/g"))
-	others=($(grep -Ev "^[[:space:]]*$DM" "$SHEET_FILE"))
-	
-	local IFS="$DM"
-	for((i=0; i<${#items[@]};i++)); do
-		read -r t _ac[$i] _ka[$i] _dp[$i] _nt[$i] <<< ${items[$i]}
-		[ ${#_ac[$i]} -gt $lac ] && lac=${#_ac[$i]}
-		[ ${#_ka[$i]} -gt $lka ] && lka=${#_ka[$i]}
-		[ ${#_dp[$i]} -gt $ldp ] && ldp=${#_dp[$i]}
-		[ ${#_nt[$i]} -gt $lnt ] && lnt=${#_nt[$i]}
-	done
-
-	local IFS=' '
-	for((i=0; i<${#_ac[@]};i++)); do
-		read -r items[$i] <<< "$(printf "${DM} %-${lac}s ${DM} %-${lka}s ${DM} %-${ldp}s ${DM} %-${lnt}s $DM" "${_ac[$i]}" "${_ka[$i]}" "${_dp[$i]}" "${_nt[$i]}")"
-	done
-	( printf '%s\n' "${items[@]}" | sort -u | sed 's/${DM}[[:space:]]*$/${DM}/g'; printf '%s\n' "${others[@]}" ) > "$SHEET_FILE"
-}
-
-nocnoc() {    
-	notify-send -u critical "Cheet" "$(_preview -n $@)"
-}
-
-_preview() {
-    if [ "$1" == "-c" ]; then
-	    LCO='\033[34m'
-	    RCO='\033[0m'
-        shift 
-    elif [ "$1" == "-n" ]; then
-        LCO="<b>"
-        RCO="</b>"
-        shift
+    if ! which xclip 2> /dev/null; then
+        notify-send "Nothing was copied to clipboard, please install xclip"
+        return
     fi
 
-	if [[ "$@" =~ ^"${DM}" ]]; then
-		awk -F "$DM" "{ gsub(/[ \t]+$DM/, \"$DM\");  print \"${LCO}App/Command:${RCO}\"\$2 \"\n${LCO}Key/Arg :${RCO}\"\$3 \"\n${LCO}Description:${RCO}\"\$4 \"\n${LCO}Note :${RCO}\" \$5 }" <<< "$@"
-	else
-		echo -e "$@"
-	fi
+    echo "$@" | awk -F "${CFS}" "{gsub(/[ \t]*$CFS[ \t]*/,\"$CFS\"); print \$((${part}+1))}" | xclip -sel clip
 }
 
-_show_help() {
-	cat <<EOF
+# Edit the sheet file
+edit_all() {
+    $EDITOR "${SHEET_FILE}" </dev/tty
+
+    format_sheet
+    show_show
+}
+
+edit_single() {
+    local temp_file="$(mktemp)"
+
+    # Backup
+    echo -E "$@" >> "$HISTORY_FILE"
+    # Split the record and send them to temp file
+    echo -E "$@" | awk -F "$CFS" '{printf "%s\n%s\n%s\n%s\n%s", $2, $3, $4, $5, $6}' > "$temp_file"
+
+    $EDITOR "$temp_file" < /dev/tty
+
+    # Delete orginal record
+    index=$(grep -nF "$1" "$SHEET_FILE" | cut -d: -f1)
+    sed -i "${index}d" "$SHEET_FILE"
+
+    # Add updated record to sheet file
+    give_back "$temp_file"
+
+    rm "$temp_file"
+    format_sheet
+    fzf_show
+}
+
+add_records() {
+    local temp_file="$(mktemp)"
+
+    echo  "%% Please add your records below by following this format:
+%% App/Command
+%% Arg/Keybinding
+%% Description
+%% Note
+%% Annex: \`/path/to/file1\`; \`/path/to/file2\`" > "$temp_file"
+
+    $EDITOR "$temp_file" < /dev/tty
+
+    give_back "$temp_file"
+
+    rm "$temp_file"
+    format_sheet
+    fzf_show
+}
+
+# Add record(s) in the temp file to sheet file
+# give_back temp_file
+give_back() {
+    (cat "$1"; echo -e " \n \n \n ") | grep -v "^%%" | awk "
+    BEGIN{ record=\"\"}
+    {
+        record=record\"$CFS\"\$0
+        if(NR%5==0) {
+            print record
+            record=\"\"
+        }
+    }" >> $SHEET_FILE
+}
+
+# When there no lines in the sheet file, insert cheet's cheatsheet
+add_default() {
+    if [ ! -f "$SHEET_FILE" ] || [ $(cat "$SHEET_FILE" | wc -l) -le 1 ]; then
+        echo -e "${CFS} cheet ${CFS} <alt-l>${CFS}Add new record(s).${CFS}
+${CFS}cheet${CFS}<Ctrl-i>${CFS}Edit all records
+${CFS}cheet${CFS}<Ctrl-o>${CFS}Edit current records
+${CFS}cheet${CFS}<Alt-1~5>${CFS}Copy contents from column 1~5.
+${CFS}cheet${CFS} <Ctrl-u>${CFS}Send a record to notification (stay 60 seconds)
+${CFS}cheet${CFS} <Alt-l>${CFS}Add new annex to selected record by using fzf
+${CFS}cheet${CFS} <Ctrl-v>${CFS}Show the selected record's annex
+${CFS}cheet${CFS} <Ctrl-r>${CFS}Format sheet and reload it" >> "$SHEET_FILE"
+        format_sheet
+    fi
+}
+
+format_sheet() {
+    records=$(cat "$SHEET_FILE" | sed "s/[[:space:]]*${CFS}[[:space:]]*/${CFS}/g")
+
+    get_lens=$(cat <<EOF
+BEGIN {
+    len2 = len3 = len4 = len5 = len6 = 0
+}
+{
+    if(/^[ \t]*${CFS}/) {
+    len2 < length(\$2) && len2 = length(\$2)
+    len3 < length(\$3) && len3 = length(\$3)
+    len4 < length(\$4) && len4 = length(\$4)
+    len5 < length(\$5) && len5 = length(\$5)
+    len6 < length(\$6) && len6 = length(\$6)
+    }
+}
+END {
+    print len2, len3, len4, len5, len6
+}
+EOF
+            )
+    local IFS=' '
+    lens=($(echo -e "$records" | awk -F "${CFS}" "$get_lens"))
+
+    format_print=$(cat <<EOF
+BEGIN {
+    len2 = ${lens[0]}; len3 = ${lens[1]}; len4 = ${lens[2]}
+    len5 = ${lens[3]}; len6 = ${lens[4]}
+}
+{
+    if(/^[\t ]*${CFS}/)
+         printf "${CFS} %-${lens[0]}s ${CFS} %-${lens[1]}s ${CFS} %-${lens[2]}s ${CFS} %-${lens[3]}s ${CFS} %-${lens[4]}s ${CFS}\n", \$2, \$3, \$4, \$5, \$6
+    else
+         print \$0
+}
+EOF
+                )
+
+    echo "$records" | awk -F "${CFS}" "$format_print" | grep -Ev "^[\t $CFS]*$" | sort > "$SHEET_FILE"
+}
+
+nocnoc() {
+    local a="<b>" e="</b>" # The start and end of format range
+    local content=$(echo "$1" |\
+                        awk -F "${CFS}" "{
+        if(/^[ \t]*${CFS}/) {
+            gsub(/[ \t]+${CFS}/, \"${CFS}\");
+            printf \"${a}App/Command:${e} %s \n${a}Key/Arg :${e} %s \n${a}Description:${e} %s \n${a}Note :${e} %s\", \$2, \$3, \$4, \$5
+        }
+        else
+            print $0
+     }
+     ")
+    notify-send -t 60000 "Cheet" "$content"
+}
+
+fzf_preview() {
+    # For fzf preview window
+    local a="\033[34m" e="\033[0m" # The start and end of color range
+    echo -E "$1" | awk -F "${CFS}" "{
+        if(/^[ \t]*${CFS}/) {
+            gsub(/[ \t]+${CFS}/, \"${CFS}\");
+            printf \"${a}App/Command:${e} %s \n${a}Key/Arg:${e} %s \n${a}Description:${e} %s \n${a}Note:${e} %s \n${a}Annex:${e} %s\", \$2, \$3, \$4, \$5, \$6
+        }
+        else
+            print $0
+     }"
+}
+
+find_file() {
+    local fzf_bind="enter:execute(echo -E e {})+abort,tab:execute(echo -E o {})+abort"
+    local str=$((echo ../; ls -aA --group-directories-first  --color=never --indicator-style=slash) | fzf --prompt="$PWD/" --bind "$fzf_bind")
+    obj=${str#* }
+    case ${str%% *} in
+        o) cd "$obj" && find_file ;;
+        e) echo -E "$PWD/$obj" ;;
+    esac
+}
+
+# TODO: need more test
+add_annex() {
+    set -x
+    local obj index
+    obj=$(cd $HOME; find_file | sed -e "s@$HOME@~@g" -e 's/[\"]/\\&/g')
+    echo -E $obj
+    if [ -n "$obj" ]; then
+        index=$(grep -nF "$1" "$SHEET_FILE" | cut -d: -f1)
+        awk -i inplace -F "$CFS"  "BEGIN{annex=\"$obj\"; OFS = FS}{ if(NR==$index) {gsub(/[ \t]*$CFS[ \t]*/,\"$CFS\"); \$6=\$6\"\`\"annex\"\`; \"}}; {print \$0}" $SHEET_FILE
+        format_sheet
+    fi
+    fzf_show
+}
+
+# TODO: need more test
+show_annex() {
+    local obj
+    local objs=$(echo -E "$1" |\
+                     awk -F "$CFS" "{gsub(/[ \t]*$CFS[ \t]*/, \"$CFS\"); print \$6}" |\
+                     grep -Po "\`.*?\`;" |\
+                     sed -r -e 's/(^`)|(`;$)//g' -e '/^[ \t]*$/d' -e "s@~@$HOME@g")
+    case $(echo "$objs" | wc -l) in
+        0) return ;;
+        1) obj="$objs" ;;
+        *) obj=$(echo "$objs" | fzf) ;;
+    esac
+    test -f "$obj" || test -d "$obj" && xdg-open "$obj" || eval "$obj"
+    # fzf_show
+}
+
+show_help() {
+    cat <<EOF
 cheet -- A little bash script for querying cheatsheets with fzf
 
-	-i Choose CHEATSHEET file.
-	-h Show this help.
+    -i Choose CHEATSHEET file.
+    -h Show this help.
 EOF
 }
 
 main() {
-	while getopts "i:h" OPTION; do
-    		case $OPTION in
-			i)
-				export SHEET_FILE="$OPTARG"
-				;;
-			h)
-				_show_help
-				;;
-			*)
-				echo "Unknown option --$OPTION"
-				;;
-    		esac
-	done
+    while getopts "i:h" OPTION; do
+        case $OPTION in
+            i) export SHEET_FILE="$OPTARG" ;;
+            h) show_help; exit ;;
+            *) echo "Unknown option -$OPTION"; exit ;;
+        esac
+    done
 
-	_export_function
-	_add_default
-	_show
+    export_function
+    add_default
+    fzf_show
 }
 
 main "$@"
