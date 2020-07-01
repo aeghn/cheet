@@ -29,8 +29,8 @@ This is a little bash script for querying cheatsheets with fzf.
    Hit =<C-u>= to send a notification in critical level.
    [[https://github.com/dunst-project/dunst][dunst]] is needed.
    [[https://github.com/aeghn/cheet/blob/master/previews/nocnoc.gif]]
-** With Xtodool/i3-wm
-   bind =cheetup=, then you can 
+** With i3-wm
+   bind =cheetup=, then you can call/hide cheet with one step.
 
 * Todo
   - Add argument =--editor= to specify the editor.
